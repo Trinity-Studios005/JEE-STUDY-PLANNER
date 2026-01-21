@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JEE Study Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* accents (softer pastel) */
+    --accent-blue: #86bff8; /* slightly muted */
+    --accent-pink: #ff9fcf; /* warmer but softer */
+
+    /* light theme */
+    --bg-start: #e7f6ff; /* softer pastel blue */
+    --bg-end: #fff1f6;   /* softer pastel pink */
+    --card-bg: rgba(255,255,255,0.94);
+    --muted: #253244;
+    --surface-shadow: 0 10px 30px rgba(16,24,40,0.06);
+    --glass: rgba(255,255,255,0.55);
+
+    /* dark theme defaults (overwritten by .dark) */
+    --page-bg: linear-gradient(135deg,var(--bg-start),var(--bg-end));
+    --text-color: var(--muted);
+    --subtle: rgba(0,0,0,0.06);
+
+    /* animation timings */
+    --ease: cubic-bezier(.2,.9,.2,1);
+  }
+
+  body.dark{
+    --bg-start: #061022; /* deep navy */
+    --bg-end: #2a0918;   /* deep muted magenta */
+    --card-bg: rgba(10,14,18,0.72);
+    --muted: #e7eef9;
+    --surface-shadow: 0 12px 34px rgba(0,0,0,0.6);
+    --glass: rgba(255,255,255,0.02);
+    --page-bg: linear-gradient(135deg,#061022,#2a0918);
+    --subtle: rgba(255,255,255,0.04);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;}
+  body{margin:0;font-family:Inter,Segoe UI,Roboto,sans-serif;background:var(--page-bg);color:var(--muted);transition:background .45s var(--ease),color .45s var(--ease)}
+
+  header{
+    padding:18px 24px;display:flex;align-items:center;gap:16px;justify-content:space-between;
+    backdrop-filter: blur(6px);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-pink));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;box-shadow:0 8px 26px rgba(0,0,0,0.12)}
+  .title{font-weight:700;font-size:18px}
+
+  .controls-top{display:flex;gap:8px;align-items:center}
+  .theme-toggle{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--glass);border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+  .theme-toggle .dot{width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.12);transition:transform .25s var(--ease),background .25s var(--ease)}
+
+  .layout{display:grid;grid-template-columns:1fr 1.65fr 1fr;gap:18px;padding:18px;align-items:start}
+  .card{background:var(--card-bg);border-radius:14px;padding:16px;box-shadow:var(--surface-shadow);border:1px solid var(--subtle);transition:transform .22s var(--ease),box-shadow .22s var(--ease),background .4s ease}
+  .card:hover{transform:translateY(-6px)}
+  h3{margin:6px 0 12px 0}
+
+  .left .timer,.center .board,.right{min-height:200px}
+  .timer{font-size:26px;text-align:center;padding:6px 0;margin-bottom:8px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+
+  button{background:linear-gradient(90deg,var(--accent-blue),var(--accent-pink));border:none;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700;color:rgba(0,0,0,0.85);box-shadow:0 6px 18px rgba(0,0,0,0.08);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+  button:active{transform:translateY(1px) scale(.997)}
+
+  input[type="number"],input[type="text"],input[type="date"],select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:var(--muted);outline:none;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
+  textarea{height:160px}
+  input:focus,textarea:focus{box-shadow:0 8px 24px rgba(31,41,55,0.06);border-color:var(--accent-blue)}
+
+  .board{display:flex;gap:12px}
+  .column{flex:1;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:12px;padding:10px;min-height:280px;border:1px solid rgba(255,255,255,0.02);overflow:hidden}
+  .column h4{text-align:center;margin:4px 0}
+  .task{background:linear-gradient(180deg,var(--card-bg),rgba(255,255,255,0.02));padding:10px;border-radius:10px;margin-bottom:8px;cursor:grab;box-shadow:0 8px 22px rgba(0,0,0,0.06);border:1px solid rgba(255,255,255,0.03);transition:transform .18s var(--ease),box-shadow .18s var(--ease),opacity .2s}
+  .task:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.08)}
+  .task.dragging{opacity:.6;transform:scale(.99);box-shadow:0 18px 40px rgba(0,0,0,0.12)}
+
+  .muted{color:rgba(0,0,0,0.45)}
+  .small{font-size:13px;color:rgba(0,0,0,0.6)}
+  canvas{width:100%;height:160px;border-radius:8px;background:transparent}
+
+  .heatmap-legend{display:flex;gap:6px;align-items:center;margin-top:6px}
+  .heatbox{width:12px;height:12px;border-radius:3px}
+
+  /* enhanced animations */
+  .card{opacity:0;transform:translateY(20px) scale(.96);animation:cardIn .7s var(--ease) forwards}
+  @keyframes cardIn{to{opacity:1;transform:none}}
+
+  .card:hover{box-shadow:0 18px 48px rgba(0,0,0,0.25)}
+
+  button:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 12px 28px rgba(0,0,0,0.25)}
+  button:active{transform:scale(.96)}
+
+  .task{transition:transform .25s var(--ease),box-shadow .25s var(--ease),opacity .2s}
+  .task:hover{transform:translateY(-6px) scale(1.02)}
+  .task.dragging{opacity:.5;transform:scale(.95)}
+
+  .theme-toggle .dot{transition:transform .4s var(--ease)}
+  body.dark .theme-toggle .dot{transform:translateX(18px)}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+
+  /* responsive */
+  @media(max-width:980px){ .layout{grid-template-columns:1fr; } .card{margin-bottom:12px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">JP</div>
+    <div>
+      <div class="title">JEE Study Planner</div>
+      <div class="small">Focus, track, improve — Shree edition</div>
+    </div>
+  </div>
+  <div class="controls-top">
+    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light theme">
+      <div style="font-weight:700">Theme</div>
+      <div class="dot" id="themeDot"></div>
+    </div>
+    <div class="small">Auto-saves locally • Export/Import available</div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="card left">
+    <h3>Daily Study Timer</h3>
+    <div id="dailyTimer" class="timer">00:00:00</div>
+    <div class="controls row">
+      <button id="dailyStart">Start</button>
+      <button id="dailyStop">Stop</button>
+      <button id="dailyReset">Reset</button>
+    </div>
+
+    <hr />
+    <h3>Pomodoro</h3>
+    <div class="small">Set minutes (1–180)</div>
+    <input id="pomoMinutes" type="number" min="1" max="180" value="25" />
+    <div id="pomoTimer" class="timer">25:00</div>
+    <div class="controls">
+      <button id="pomoStart">Start</button>
+      <button id="pomoPause">Pause</button>
+      <button id="pomoReset">Reset</button>
+    </div>
+
+    <hr />
+    <h3>Study Streak</h3>
+    <canvas id="streakChart"></canvas>
+    <div class="muted">Total days studied: <span id="totalDays">0</span></div>
+    <div class="muted">Current consecutive streak: <span id="currentStreak">0</span></div>
+    <div style="margin-top:8px"><button id="markStudied">Mark Today Studied</button></div>
+
+    <hr />
+    <h3>Motivation</h3>
+    <div id="motivation" class="small">Keep going — small steps every day.</div>
+  </div>
+
+  <div class="card center">
+    <h3 style="text-align:center">Task Board</h3>
+    <div class="board">
+      <div class="column" data-status="todo">
+        <h4>To-Do</h4>
+        <input class="adder" data-target="todo" placeholder="Add chapter & press Enter" />
+      </div>
+      <div class="column" data-status="doing">
+        <h4>Doing</h4>
+        <input class="adder" data-target="doing" placeholder="Add chapter & press Enter" />
+      </div>
+      <div class="column" data-status="done">
+        <h4>Done</h4>
+        <input class="adder" data-target="done" placeholder="Add chapter & press Enter" />
+      </div>
+    </div>
+    <div class="muted" style="margin-top:10px">Drag & drop tasks between columns. Double-click a task to delete it.</div>
+  </div>
+
+  <div class="card right">
+    <h3>Quick Notes</h3>
+    <textarea id="notes" placeholder="Formulas, mistakes, strategies..."></textarea>
+
+    <hr />
+    <h3>Test Score Tracker</h3>
+    <input id="testName" type="text" placeholder="Test name (e.g. BTEST-1)" />
+    <input id="testScore" type="number" placeholder="Score (marks)" />
+    <input id="testDate" type="date" />
+    <div class="row" style="margin-bottom:8px">
+      <button id="addScore">Add Score</button>
+      <button id="clearScores">Clear All</button>
+    </div>
+    <ul id="scoresList"></ul>
+    <h4 style="margin-top:12px">Scores over time</h4>
+    <canvas id="scoreChart"></canvas>
+
+    <hr />
+    <h3>Consistency Heatmap (last 90 days)</h3>
+    <canvas id="heatmap" style="height:120px"></canvas>
+    <div class="heatmap-legend small"><div class="heatbox" id="h0" style="background:var(--card-bg);border:1px solid rgba(255,255,255,0.04)"></div><div>None</div><div class="heatbox" id="h1" style="background:#ffd8ea"></div><div>Low</div><div class="heatbox" id="h2" style="background:#ffb6d5"></div><div>Medium</div><div class="heatbox" id="h3" style="background:#86bff8"></div><div>High</div></div>
+
+    <hr />
+    <h4>Backup / Sync (Export / Import)</h4>
+    <div class="row">
+      <button id="exportBtn">Export JSON</button>
+      <input type="file" id="importFile" accept="application/json" />
+      <button id="importBtn">Import File</button>
+    </div>
+    <div style="margin-top:8px">
+      <div class="small">Or paste JSON below and click "Import JSON":</div>
+      <textarea id="pasteJson" placeholder='Paste exported JSON here' style="height:100px;margin-top:8px"></textarea>
+      <div class="row" style="margin-top:8px"><button id="pasteImportBtn">Import JSON</button><button id="copyExportBtn">Copy Exported JSON</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+// ---- THEME ----
+const THEME_KEY = 'jeePlanner_theme';
+function applyTheme(theme){ if(theme==='dark') document.body.classList.add('dark'); else document.body.classList.remove('dark'); localStorage.setItem(THEME_KEY, theme||'light'); const dot = document.getElementById('themeDot'); if(dot) dot.style.background = (theme==='dark'? '#1f2937':'#fff'); }
+const savedTheme = localStorage.getItem(THEME_KEY) || 'light'; applyTheme(savedTheme);
+document.getElementById('themeToggle').addEventListener('click', ()=>{ const now = document.body.classList.contains('dark')? 'light':'dark'; applyTheme(now); });
+
+// ---- DATA & STORAGE ----
+const STORAGE_KEY = 'jeePlanner_v2';
+const defaultData = { tasks:{todo:[],doing:[],done:[]}, notes:'', scores:[], studiedDates:[], studiedLog:{} };
+let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData;
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); updateAll(); }
+
+// ---- TASK BOARD (objects for robustness) ----
+function genId(){ return 't'+Date.now()+Math.random().toString(36).slice(2,8); }
+function renderTasks(){ document.querySelectorAll('.column').forEach(c=>{ const st=c.dataset.status; c.querySelectorAll('.task').forEach(n=>n.remove()); (data.tasks[st]||[]).forEach((item)=>{ const d=document.createElement('div'); d.className='task'; d.draggable=true; d.innerText = item.title || item; d.dataset.id = item.id || ''; d.ondblclick=()=>{ if(confirm('Delete this task?')){ const idx = (data.tasks[st]||[]).findIndex(x=>x.id===item.id); if(idx!==-1){ data.tasks[st].splice(idx,1); save(); } } }; d.ondragstart=e=>{ d.classList.add('dragging'); e.dataTransfer.setData('text/plain', JSON.stringify({id:item.id, st})); }; d.ondragend=()=>{ d.classList.remove('dragging'); }; c.appendChild(d); }); }); }
+function setupDrag(){ document.querySelectorAll('.column').forEach(c=>{ c.ondragover=e=>e.preventDefault(); c.ondrop=e=>{ try{ const o=JSON.parse(e.dataTransfer.getData('text/plain')); const srcList=data.tasks[o.st]||[]; const idx=srcList.findIndex(x=>x.id===o.id); if(idx!==-1){ const [obj]=srcList.splice(idx,1); data.tasks[c.dataset.status]=data.tasks[c.dataset.status]||[]; data.tasks[c.dataset.status].push(obj); save(); } }catch(err){console.error(err);} }; }); }
+Array.from(document.getElementsByClassName('adder')).forEach(inp=>{ inp.addEventListener('keypress', e=>{ if(e.key==='Enter' && inp.value.trim()){ const obj={ id:genId(), title:inp.value.trim(), subject:'', estMin:null }; data.tasks[inp.dataset.target]=data.tasks[inp.dataset.target]||[]; data.tasks[inp.dataset.target].push(obj); inp.value=''; save(); } }); });
+function migrateTasksToObjects(){ let changed=false; ['todo','doing','done'].forEach(status=>{ data.tasks[status]=(data.tasks[status]||[]).map(item=>{ if(typeof item==='string'){ changed=true; return { id:genId(), title:item, subject:'', estMin:null }; } if(typeof item==='object' && !item.id){ item.id=genId(); changed=true; } return item; }); }); if(changed) save(); }
+
+// ---- NOTES ----
+const notesEl=document.getElementById('notes'); notesEl.value=data.notes||''; notesEl.addEventListener('input', ()=>{ data.notes=notesEl.value; save(); });
+
+// ---- STUDY STREAK & LOG ----
+function isoDate(d){ const x=new Date(d); return x.toISOString().slice(0,10); }
+function markStudied(){ const today=isoDate(new Date()); const idx=(data.studiedDates||[]).indexOf(today); if(idx===-1){ data.studiedDates=data.studiedDates||[]; data.studiedDates.push(today); data.studiedDates.sort(); save(); alert('Marked '+today+' as studied'); } else { if(confirm('You already marked today. Remove mark?')){ data.studiedDates.splice(idx,1); save(); } } }
+function calcCurrentStreak(){ const dates=Array.from(new Set(data.studiedDates||[])).sort(); if(dates.length===0) return 0; let streak=0; let cur=new Date(dates[dates.length-1]); cur.setHours(0,0,0,0); for(let i=dates.length-1;i>=0;i--){ const day=new Date(dates[i]); day.setHours(0,0,0,0); const diffDays=Math.round((cur-day)/(1000*60*60*24)); if(diffDays===0){ streak++; cur.setDate(cur.getDate()-1); } else if(diffDays===1){ streak++; cur.setDate(cur.getDate()-1); } else break; } return streak; }
+function updateStreakDisplay(){ document.getElementById('totalDays').innerText=(data.studiedDates||[]).length; document.getElementById('currentStreak').innerText=calcCurrentStreak(); }
+
+function addStudiedSecondsForToday(sec){ const d=isoDate(new Date()); data.studiedLog = data.studiedLog || {}; data.studiedLog[d] = (data.studiedLog[d]||0) + sec; if(!data.studiedDates.includes(d)) data.studiedDates.push(d); data.studiedDates.sort(); save(); }
+
+// ---- CHART HELPERS ----
+function fitCanvas(c){ const ctx=c.getContext('2d'); const DPR=window.devicePixelRatio||1; c.width=c.clientWidth*DPR; c.height=c.clientHeight*DPR; ctx.scale(DPR,DPR); return ctx; }
+function drawDateScoreChart(canvasId, entries){ const canvas=document.getElementById(canvasId); const ctx=fitCanvas(canvas); ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); if(!entries||entries.length===0){ ctx.fillStyle='rgba(100,100,100,0.6)'; ctx.font='14px sans-serif'; ctx.fillText('Not enough data',10,20); return; } const ptsRaw=entries.map(e=>({t:new Date(e.date).getTime(), score:Number(e.score), name:e.name, raw:e})).sort((a,b)=>a.t-b.t); const byDay={}; ptsRaw.forEach(p=>{ const d=new Date(p.t).toISOString().slice(0,10); (byDay[d]||=[]).push(p); }); const pts=[]; Object.values(byDay).forEach(arr=>{ const n=arr.length; arr.forEach((p,i)=>{ const jitterPx=(i-(n-1)/2)*6; pts.push({...p,jitter:jitterPx}); }); }); const w=canvas.clientWidth,h=canvas.clientHeight,pad=40; const minT=Math.min(...pts.map(p=>p.t)); const maxT=Math.max(...pts.map(p=>p.t)); const minY=Math.min(...pts.map(p=>p.score),0); const maxY=Math.max(...pts.map(p=>p.score),100); const timeSpan=Math.max(1,maxT-minT); const xOf=(t,j)=>pad+((t-minT)/timeSpan)*(w-2*pad)+(j||0); const yOf=v=>pad+(1-(v-minY)/(maxY-minY||1))*(h-2*pad); ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1; for(let i=0;i<=4;i++){ const y=pad+i*(h-2*pad)/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='12px sans-serif'; const uniqDates=Object.keys(byDay).sort(); const nLabels=Math.min(6,uniqDates.length); for(let i=0;i<nLabels;i++){ const idx=Math.floor(i*(uniqDates.length-1)/(nLabels-1||1)); const d=uniqDates[idx]; const x=xOf(new Date(d).getTime(),0); ctx.fillText(d,x-30,h-8); } ctx.beginPath(); pts.forEach((p,i)=>{ const x=xOf(p.t,p.jitter); const y=yOf(p.score); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.strokeStyle='rgba(255,77,166,0.95)'; ctx.lineWidth=2; ctx.stroke(); for(let i=0;i<pts.length;i++){ const x=xOf(pts[i].t,pts[i].jitter); const y=yOf(pts[i].score); ctx.beginPath(); ctx.fillStyle='var(--card-bg)'; ctx.strokeStyle='rgba(255,77,166,1)'; ctx.lineWidth=2; ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke(); } canvas.onmousemove=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=(ev.clientX-rect.left); const my=(ev.clientY-rect.top); let nearest=null,minD=9999; for(let i=0;i<pts.length;i++){ const x=xOf(pts[i].t,pts[i].jitter); const y=yOf(pts[i].score); const d=Math.hypot(x-mx,y-my); if(d<minD){minD=d; nearest={pt:pts[i],x,y};} } const tooltip=document.getElementById('tooltip'); if(nearest && minD<10){ tooltip.style.display='block'; tooltip.style.left=(rect.left+nearest.x+12)+'px'; tooltip.style.top=(rect.top+nearest.y-12)+'px'; tooltip.innerHTML=`<strong>${nearest.pt.name}</strong><div>${new Date(nearest.pt.t).toISOString().slice(0,10)} — ${nearest.pt.score}</div>`; } else {tooltip.style.display='none'; } }; canvas.onmouseleave=()=>{ document.getElementById('tooltip').style.display='none'; } }
+function drawDateStreakChart(canvasId, dates){ const canvas=document.getElementById(canvasId); const ctx=fitCanvas(canvas); ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); if(!dates||dates.length===0){ ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='14px sans-serif'; ctx.fillText('No study days yet',10,20); return; } const uniq=Array.from(new Set(dates)).sort(); const pts=uniq.map((d,i)=>({t:new Date(d).getTime(), val:i+1, label:d})); const w=canvas.clientWidth,h=canvas.clientHeight,pad=40; const minT=Math.min(...pts.map(p=>p.t)); const maxT=Math.max(...pts.map(p=>p.t)); const minY=0; const maxY=pts.length; const timeSpan=Math.max(1,maxT-minT); const xOf=t=>pad+((t-minT)/timeSpan)*(w-2*pad); const yOf=v=>pad+(1-(v-minY)/(maxY-minY||1))*(h-2*pad); ctx.strokeStyle='rgba(255,255,255,0.06)'; for(let i=0;i<=4;i++){ const y=pad+i*(h-2*pad)/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='12px sans-serif'; const nLabels=Math.min(6,pts.length); for(let i=0;i<nLabels;i++){ const idx=Math.floor(i*(pts.length-1)/(nLabels-1||1)); const dateStr=pts[idx].label; const x=xOf(pts[idx].t); ctx.fillText(dateStr,x-30,h-8); } ctx.beginPath(); for(let i=0;i<pts.length;i++){ const x=xOf(pts[i].t); const y=yOf(pts[i].val); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.strokeStyle='rgba(134,191,248,0.98)'; ctx.lineWidth=2; ctx.stroke(); for(let i=0;i<pts.length;i++){ const x=xOf(pts[i].t); const y=yOf(pts[i].val); ctx.beginPath(); ctx.fillStyle='var(--card-bg)'; ctx.strokeStyle='rgba(59,130,246,1)'; ctx.lineWidth=2; ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke(); } }
+
+// ---- HEATMAP (consistency) ----
+function drawHeatmap(canvasId, studiedLog, days=90){ const canvas=document.getElementById(canvasId); const ctx=fitCanvas(canvas); ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); const end=new Date(); end.setHours(0,0,0,0); const dates=[]; for(let i=days-1;i>=0;i--){ const d=new Date(end); d.setDate(end.getDate()-i); dates.push(d.toISOString().slice(0,10)); } const vals=dates.map(d=>Math.round((studiedLog&&studiedLog[d]||0)/60)); const maxVal=Math.max(...vals,1); const cols=Math.ceil(days/7); const boxSize=Math.min(18,Math.floor((canvas.clientWidth-24)/cols)); const gap=4; const startX=10; const startY=10; for(let i=0;i<dates.length;i++){ const d=dates[i]; const dt=new Date(d); const weekIdx=Math.floor(i/7); const weekday=dt.getDay(); const x=startX+weekIdx*(boxSize+gap); const y=startY+weekday*(boxSize+gap); const intensity=vals[i]/maxVal; const color=intensity<0.001? 'transparent': intensity<0.33? '#ffd8ea' : intensity<0.66? '#ffb6d5' : '#86bff8'; ctx.fillStyle=color; ctx.fillRect(x,y,boxSize,boxSize); ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.strokeRect(x,y,boxSize,boxSize); } const rect=canvas.getBoundingClientRect(); canvas.onmousemove=function(ev){ const mx=ev.clientX-rect.left; const my=ev.clientY-rect.top; let found=null; for(let i=0;i<dates.length;i++){ const dt=new Date(dates[i]); const weekIdx=Math.floor(i/7); const weekday=dt.getDay(); const x=startX+weekIdx*(boxSize+gap); const y=startY+weekday*(boxSize+gap); if(mx>=x && mx<=x+boxSize && my>=y && my<=y+boxSize){ found={date:dates[i], mins:Math.round((studiedLog&&studiedLog[dates[i]]||0)/60), x:x+rect.left, y:y+rect.top}; break; } } const tt=document.getElementById('tooltip'); if(found){ tt.style.display='block'; tt.style.left=(found.x+12)+'px'; tt.style.top=(found.y-8)+'px'; tt.innerHTML=`<strong>${found.date}</strong><div>${found.mins} min</div>`; } else tt.style.display='none'; }; canvas.onmouseleave=()=>{ document.getElementById('tooltip').style.display='none'; } }
+
+// ---- TEST SCORES ----
+const addScoreBtn=document.getElementById('addScore'); addScoreBtn.addEventListener('click', ()=>{ const name=document.getElementById('testName').value.trim(); const score=Number(document.getElementById('testScore').value); const date=document.getElementById('testDate').value || isoDate(new Date()); if(!name || isNaN(score)){ alert('Enter test name and numeric score'); return; } data.scores.push({name,score,date}); data.scores.sort((a,b)=>new Date(a.date)-new Date(b.date)); save(); document.getElementById('testName').value=''; document.getElementById('testScore').value=''; document.getElementById('testDate').value=''; }); document.getElementById('clearScores').addEventListener('click', ()=>{ if(confirm('Clear all saved scores?')){ data.scores=[]; save(); }});
+function renderScoresList(){ const ul=document.getElementById('scoresList'); ul.innerHTML=''; data.scores.forEach((s,i)=>{ const li=document.createElement('li'); li.innerHTML=`<strong>${s.name}</strong> — ${s.score} <span class="muted">(${s.date})</span> <button data-i='${i}' style='margin-left:8px'>Delete</button>`; ul.appendChild(li); li.querySelector('button').onclick=()=>{ if(confirm('Delete this entry?')){ data.scores.splice(i,1); save(); } }; }); }
+function updateScoreChart(){ drawDateScoreChart('scoreChart', data.scores); }
+
+// ---- DAILY & POMODORO TIMERS (record study time on stop) ----
+let dailyTimerInt=null; let dailySeconds=0; const dailyDisplay=document.getElementById('dailyTimer'); function formatHMS(sec){ const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; } document.getElementById('dailyStart').addEventListener('click', ()=>{ if(dailyTimerInt) return; dailyTimerInt=setInterval(()=>{ dailySeconds++; dailyDisplay.innerText=formatHMS(dailySeconds); },1000); }); document.getElementById('dailyStop').addEventListener('click', ()=>{ if(!dailyTimerInt) return; clearInterval(dailyTimerInt); dailyTimerInt=null; addStudiedSecondsForToday(dailySeconds); dailySeconds=0; dailyDisplay.innerText=formatHMS(0); alert('Saved today\'s study time'); }); document.getElementById('dailyReset').addEventListener('click', ()=>{ if(confirm('Reset daily timer?')){ clearInterval(dailyTimerInt); dailyTimerInt=null; dailySeconds=0; dailyDisplay.innerText=formatHMS(0); } });
+// Pomodoro
+let pomoInt=null; let pomoRemaining=25*60; const pomoDisplay=document.getElementById('pomoTimer'); function setPomoFromInput(){ const mins=Number(document.getElementById('pomoMinutes').value)||25; const safe=Math.max(1,Math.min(180,Math.floor(mins))); document.getElementById('pomoMinutes').value=safe; pomoRemaining=safe*60; updatePomoDisplay(); } document.getElementById('pomoMinutes').addEventListener('change', ()=>{ setPomoFromInput(); save(); }); function updatePomoDisplay(){ const m=Math.floor(pomoRemaining/60); const s=pomoRemaining%60; pomoDisplay.innerText=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; } document.getElementById('pomoStart').addEventListener('click', ()=>{ if(pomoInt) return; pomoInt=setInterval(()=>{ if(pomoRemaining>0){ pomoRemaining--; updatePomoDisplay(); } else { clearInterval(pomoInt); pomoInt=null; alert('Pomodoro finished — take a break!'); } },1000); }); document.getElementById('pomoPause').addEventListener('click', ()=>{ clearInterval(pomoInt); pomoInt=null; }); document.getElementById('pomoReset').addEventListener('click', ()=>{ setPomoFromInput(); clearInterval(pomoInt); pomoInt=null; });
+
+// ---- EXPORT / IMPORT FUNCTIONS ----
+function validateData(obj){ if(!obj || typeof obj!=='object') return false; if(!obj.tasks || typeof obj.tasks!=='object') return false; for(const k of ['todo','doing','done']) if(!Array.isArray(obj.tasks[k])) return false; if(typeof obj.notes!=='string') return false; if(!Array.isArray(obj.scores) || !Array.isArray(obj.studiedDates)) return false; if(typeof obj.studiedLog!=='object') return false; return true; } function exportData(){ try{ const json=JSON.stringify(data,null,2); const blob=new Blob([json],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); const filename='jeePlanner_backup_'+(new Date()).toISOString().slice(0,10)+'.json'; a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }catch(e){ alert('Export failed: '+e.message); } } document.addEventListener('click', function(e){ if(e.target && e.target.id==='exportBtn') exportData(); }); document.getElementById('importBtn').addEventListener('click', ()=>{ const f=document.getElementById('importFile').files[0]; if(!f){ alert('Choose a JSON file first'); return; } const reader=new FileReader(); reader.onload=e=>{ try{ const obj=JSON.parse(e.target.result); if(!validateData(obj)){ alert('Invalid file format'); return; } if(confirm('Importing will overwrite current data. Continue?')){ data=obj; migrateTasksToObjects(); save(); alert('Import successful'); } }catch(err){ alert('Invalid JSON file'); } }; reader.readAsText(f); }); document.getElementById('pasteImportBtn').addEventListener('click', ()=>{ const txt=document.getElementById('pasteJson').value.trim(); if(!txt){ alert('Paste JSON first'); return; } try{ const obj=JSON.parse(txt); if(!validateData(obj)){ alert('Invalid data format'); return; } if(confirm('Importing will overwrite current data. Continue?')){ data=obj; migrateTasksToObjects(); save(); alert('Import successful'); } }catch(err){ alert('Invalid JSON'); } }); document.getElementById('copyExportBtn').addEventListener('click', async ()=>{ try{ const txt=JSON.stringify(data,null,2); if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(txt); alert('Copied to clipboard'); } else { prompt('Copy this JSON:', txt); } }catch(err){ alert('Copy failed'); } }); document.getElementById('exportBtn') && (document.getElementById('exportBtn').onclick=exportData);
+
+// ---- INITIALIZATION ----
+function updateMotivation(){ const streak=calcCurrentStreak(); const total=(data.studiedDates||[]).length; let msg=''; if(streak>=21) msg += '🔥 Legendary streak — keep it up!\n'; else if(streak>=7) msg += 'Great! '+streak+' day streak — don\'t break it.\n'; else if(streak>=3) msg += 'Nice '+streak+' day streak — momentum building.\n'; else msg += 'Start small — mark today studied!\n'; const today=isoDate(new Date()); const minsToday=Math.round((data.studiedLog && data.studiedLog[today]||0)/60); if(minsToday>0) msg += `You studied ${minsToday} min today. Good job!\n`; if((data.scores||[]).length>=2){ const last=data.scores[data.scores.length-1].score; const prev=data.scores[data.scores.length-2].score; const diff=last-prev; if(diff>0) msg += `Score improved by ${diff} from last test — solid!\n`; else if(diff<0) msg += `Score dropped by ${-diff} from last test — focus on weak topics.\n`; else msg += 'Score unchanged from last test.\n'; } document.getElementById('motivation').innerText=msg.trim(); }
+
+function updateAll(){ renderTasks(); setupDrag(); renderScoresList(); updateScoreChart(); updateStreakDisplay(); updateStreakChart(); updatePomoDisplay(); drawHeatmap('heatmap', data.studiedLog||{},90); updateMotivation(); }
+(function init(){ if(!data) data=defaultData; migrateTasksToObjects(); data.studiedLog = data.studiedLog || {}; if(document.getElementById('testDate')) document.getElementById('testDate').value=''; updateAll(); })();
+
+// keep save global (for console debugging)
+window.save = save;
+
+</script>
+</body>
+</html>
